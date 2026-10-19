@@ -24,6 +24,16 @@ LLMs hosted by e.g. OpenAI or OpenRouter process natural language commands, prov
 The program is designed to be used with its default model and OpenAI services. It's possible to use different OpenAI models or to connect to any OpenAI-compatible API which includes local setups.
 You can change the LLM's name, endpoint and if required API key in the "AI Geeks Section" of the settings.
 
+#### Using GPT-6
+
+Select the **OpenAI** provider for the LLM, Agent LLM, and Vision roles you want to change. This provider uses the Responses API, which supports GPT-6 reasoning with function calling. Changing a model on a Chat Completions provider is not equivalent; GPT-6 Astra and GPT-6.1 Sol require Responses for tools.
+
+A starting configuration is `gpt-6-luna` with **low** reasoning for conversation and vision, and `gpt-6.1-sol` with **low** reasoning for the Agent LLM. These are starting settings to evaluate in your own game session, not measured performance recommendations. Keep speech-to-text, text-to-speech, and embeddings on their separate models.
+
+The OpenAI Responses adapter supports `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-sol`, and `gpt-6-luna`, including dated snapshots. It translates **minimal** reasoning to **low**, and **none** or **disabled** to **low** for Astra and GPT-6.1 Sol, which require reasoning. For Sol and Luna, **none** is sent explicitly to disable reasoning. **Default** uses **medium** reasoning. Temperature and incompatible sampling/log-probability options are omitted when reasoning is enabled.
+
+See the [official GPT-6 API guidance](https://developers.openai.com/api/docs/guides/latest-model#update-api-and-model-parameters) for model capabilities and parameter requirements. API model access depends on your OpenAI account. Existing model defaults are unchanged.
+
 #### 1.1. Pricing Information
 
 * **OpenAI**: Generally, access to OpenAI models requires a payment. For more information on pricing, please visit: https://openai.com/api/pricing/

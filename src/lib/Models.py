@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Iterable
 import io
 import base64
 import json
+import re
 import speech_recognition as sr
 import soundfile as sf
 import numpy as np
@@ -347,6 +348,43 @@ class OpenAIResponsesLLMModel(LLMModel):
         self.extra_body = extra_body or {}
         self.extra_headers = extra_headers or {}
 
+    def _apply_gpt6_parameters(self, params: dict[str, Any]) -> None:
+        model_match = re.fullmatch(
+            r"(gpt-6-astra|gpt-6\.1-sol|gpt-6-sol|gpt-6-luna)(?:-\d{4}-\d{2}-\d{2})?",
+            self.model_name,
+        )
+        if not model_match:
+            return
+
+        # Older saved settings can select efforts that GPT-6 does not support.
+        # Send `none` explicitly: omitting it would enable default reasoning.
+        extra_body = dict(params.get("extra_body") or {})
+        reasoning = dict(extra_body.pop("reasoning", params.get("reasoning", {})))
+        effort = reasoning.get("effort", self.reasoning_effort)
+        if effort in (None, "", "default"):
+            effort = "medium"
+        elif effort == "disabled":
+            effort = "none"
+        elif effort == "minimal":
+            effort = "low"
+        if effort == "none" and model_match.group(1) in {"gpt-6-astra", "gpt-6.1-sol"}:
+            effort = "low"
+        params["reasoning"] = {**reasoning, "effort": effort}
+        params.setdefault("text", {"verbosity": "low"})
+
+        if effort != "none":
+            # Sampling and log probabilities are incompatible with reasoning.
+            for body in (params, extra_body):
+                for key in ("temperature", "top_p", "top_logprobs"):
+                    body.pop(key, None)
+                if "include" in body:
+                    body["include"] = [
+                        item for item in body["include"]
+                        if item != "message.output_text.logprobs"
+                    ]
+        if self.extra_body:
+            params["extra_body"] = extra_body
+
     def _has_message_content(self, content: Any) -> bool:
         if content is None:
             return False
@@ -569,6 +607,8 @@ class OpenAIResponsesLLMModel(LLMModel):
 
         if self.extra_headers:
             params["extra_headers"] = self.extra_headers
+
+        self._apply_gpt6_parameters(params)
 
         try:
             raw_response = self.client.responses.with_raw_response.create(**params)
